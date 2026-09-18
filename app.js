@@ -381,18 +381,18 @@ function renderFallbackForecastChart(canvasId) {
 document.addEventListener('DOMContentLoaded', initCharts);
 setTimeout(initCharts, 500);
 
-// ======================== Leaflet Map & Interactive SVG Fallback ========================
 const mapData = [
-  { lat: 16.7, lng: 73.3, type: 'disaster', emoji: '🌀', label: 'Cyclone Alert', detail: 'Ratnagiri, Maharashtra', severity: '🔴 Severe', color: '#ef4444' },
-  { lat: 9.9, lng: 76.3, type: 'disaster', emoji: '🌊', label: 'Coastal Flooding', detail: 'Kochi, Kerala', severity: '🟠 High', color: '#f97316' },
-  { lat: 15.5, lng: 73.8, type: 'warning', emoji: '⚠️', label: 'High Tide Warning', detail: 'Goa Coastline', severity: '🟡 Moderate', color: '#eab308' },
-  { lat: 17.7, lng: 83.3, type: 'marine', emoji: '🐢', label: 'Marine Rescue', detail: 'Vizag Beach, AP', severity: 'Turtle Rescue', color: '#a855f7' },
-  { lat: 18.9, lng: 72.9, type: 'warning', emoji: '🛢️', label: 'Oil Spill', detail: 'Mumbai Harbor', severity: '🟡 Moderate', color: '#eab308' },
-  { lat: 13.1, lng: 80.3, type: 'shelter', emoji: '🏠', label: 'Relief Shelter', detail: 'Chennai, TN', severity: '✅ Active', color: '#22c55e' },
-  { lat: 15.8, lng: 73.7, type: 'shelter', emoji: '🏥', label: 'Hospital Alerted', detail: 'Panjim, Goa', severity: '🔵 Standby', color: '#3b82f6' },
-  { lat: 11.0, lng: 76.9, type: 'shelter', emoji: '🟢', label: 'Evacuation Shelter', detail: 'Coimbatore, TN', severity: '✅ Active', color: '#22c55e' },
-  { lat: 20.0, lng: 85.8, type: 'disaster', emoji: '🌧️', label: 'Heavy Rainfall', detail: 'Bhubaneswar, Odisha', severity: '🟠 High', color: '#f97316' },
-  { lat: 22.0, lng: 88.3, type: 'warning', emoji: '🌊', label: 'Storm Surge', detail: 'Kolkata, WB', severity: '🟡 Moderate', color: '#eab308' },
+  { lat: 19.0760, lng: 72.8777, type: 'warning', emoji: '🛢️', label: 'Oil Spill Alert', detail: 'Mumbai Harbor, MH', severity: '🟡 Moderate', color: '#eab308' },
+  { lat: 16.9902, lng: 73.3120, type: 'disaster', emoji: '🌀', label: 'Cyclone Alert', detail: 'Ratnagiri Coast, MH', severity: '🔴 Severe', color: '#ef4444' },
+  { lat: 9.9312, lng: 76.2673, type: 'disaster', emoji: '🌊', label: 'Coastal Flooding', detail: 'Kochi Marina, Kerala', severity: '🟠 High', color: '#f97316' },
+  { lat: 15.4989, lng: 73.8278, type: 'shelter', emoji: '🏥', label: 'Hospital Alerted', detail: 'Panjim, Goa', severity: '🔵 Standby', color: '#3b82f6' },
+  { lat: 13.0827, lng: 80.2707, type: 'shelter', emoji: '🏠', label: 'Relief Shelter', detail: 'Chennai Coast, TN', severity: '✅ Active', color: '#22c55e' },
+  { lat: 17.6868, lng: 83.2185, type: 'marine', emoji: '🐢', label: 'Marine Rescue', detail: 'Vizag Beach, AP', severity: 'Turtle Rescue', color: '#a855f7' },
+  { lat: 20.2961, lng: 85.8245, type: 'disaster', emoji: '🌧️', label: 'Heavy Rainfall', detail: 'Bhubaneswar, Odisha', severity: '🟠 High', color: '#f97316' },
+  { lat: 22.5726, lng: 88.3639, type: 'warning', emoji: '🌊', label: 'Storm Surge', detail: 'Kolkata Sundarbans, WB', severity: '🟡 Moderate', color: '#eab308' },
+  { lat: 28.6139, lng: 77.2090, type: 'shelter', emoji: '🏛️', label: 'NDMA HQ Command', detail: 'New Delhi (HQ)', severity: '✅ Active', color: '#22c55e' },
+  { lat: 23.0225, lng: 72.5714, type: 'warning', emoji: '⚠️', label: 'High Wind Advisory', detail: 'Ahmedabad, Gujarat', severity: '🟡 Moderate', color: '#eab308' },
+  { lat: 11.6233, lng: 92.7265, type: 'disaster', emoji: '🌊', label: 'Tsunami Watch', detail: 'Port Blair, Andaman', severity: '🔴 High', color: '#ef4444' },
 ];
 
 function initMap() {
@@ -403,13 +403,26 @@ function initMap() {
     try {
       if (mapContainer._leaflet_id) return; // Already initialized
 
-      const map = L.map('map', { center: [15.5, 76.5], zoom: 5, zoomControl: true });
-      
-      // Use CartoDB Dark Matter / Voyager or OpenStreetMap
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors | AquaShield GIS',
-        maxZoom: 18,
-      }).addTo(map);
+      // CartoDB Voyager Tile Layer — Extremely fast, reliable, zero 403 blocks
+      const cartoTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '© CARTO © OpenStreetMap contributors | AquaShield India GIS',
+        subdomains: 'abcd',
+        maxZoom: 19
+      });
+
+      // Esri World Topo Map Backup Tile Layer
+      const esriTile = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles © Esri | AquaShield GIS',
+        maxZoom: 18
+      });
+
+      // Create map centered over geographic center of India (Nagpur / Central India)
+      const map = L.map('map', { 
+        center: [20.5937, 78.9629], // All India view
+        zoom: 5, 
+        zoomControl: true,
+        layers: [cartoTile]
+      });
 
       function createMarker(color, emoji) {
         return L.divIcon({
@@ -429,7 +442,7 @@ function initMap() {
       mapData.forEach(d => {
         const marker = L.marker([d.lat, d.lng], { icon: createMarker(d.color, d.emoji) }).addTo(map);
         marker.bindPopup(`
-          <div style="font-family:'Inter',sans-serif;min-width:180px;background:#03045e;color:#caf0f8;padding:8px;border-radius:8px;">
+          <div style="font-family:'Inter',sans-serif;min-width:180px;background:#03045e;color:#caf0f8;padding:10px;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.4);">
             <div style="font-weight:700;font-size:0.95rem;color:#caf0f8;margin-bottom:6px;">${d.emoji} ${d.label}</div>
             <div style="font-size:0.8rem;color:#90e0ef;margin-bottom:4px;">📍 ${d.detail}</div>
             <div style="font-size:0.8rem;font-weight:600;color:#e0f7ff;">${d.severity}</div>
