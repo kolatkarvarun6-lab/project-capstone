@@ -17,6 +17,7 @@ from app.routers import (
     sos_router,
     chat_router,
     sms_router,
+    broadcast_router,
 )
 
 @asynccontextmanager
@@ -47,6 +48,7 @@ app.include_router(routes_router)
 app.include_router(sos_router)
 app.include_router(chat_router)
 app.include_router(sms_router)
+app.include_router(broadcast_router)
 
 @app.get("/api/health")
 def health_check():
@@ -66,6 +68,10 @@ def get_css():
 @app.get("/app.js")
 def get_js():
     return FileResponse(os.path.join(ROOT_DIR, "app.js"))
+
+@app.get("/mesh_broadcast.js")
+def get_mesh_js():
+    return FileResponse(os.path.join(ROOT_DIR, "mesh_broadcast.js"), media_type="application/javascript")
 
 @app.get("/sw.js")
 def get_sw():

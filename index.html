@@ -1054,6 +1054,67 @@
         <a href="tel:1070" class="call-btn">Call</a>
       </div>
     </div>
+
+    <!-- ========== UNIVERSAL EMERGENCY MESH BROADCAST CARD ========== -->
+    <div class="glass-card" style="margin-top: 2rem; padding: 1.8rem;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom: 1.2rem; border-bottom:1px solid rgba(144,224,239,0.2); padding-bottom:0.8rem;">
+        <div>
+          <h3 style="font-size:1.3rem; font-weight:800; color:#caf0f8; font-family:'Orbitron',sans-serif;">
+            📢 Universal Emergency Broadcast
+          </h3>
+          <p style="font-size:0.85rem; color:#90e0ef; margin-top:2px;">
+            Broadcast flood/disaster alert to EVERYONE connected online or offline via P2P Mesh
+          </p>
+        </div>
+        <div id="meshStatusBadge" style="padding:6px 14px; border-radius:50px; background:rgba(34,197,94,0.2); border:1px solid #22c55e; color:#86efac; font-size:0.8rem; font-weight:700;">
+          📡 ONLINE (Server Broadcast Active)
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1.5rem;">
+        <!-- Alert Generation Form -->
+        <div style="background:rgba(255,255,255,0.04); padding:1.2rem; border-radius:12px; border:1px solid rgba(144,224,239,0.15);">
+          <h4 style="font-size:1rem; font-weight:700; color:#e0f7ff; margin-bottom:1rem;">🚨 Generate & Broadcast Disaster Alert</h4>
+          
+          <div style="margin-bottom:1rem;">
+            <label style="font-size:0.8rem; color:#90e0ef; font-weight:600; display:block; margin-bottom:4px;">Disaster / Alert Type</label>
+            <select id="bcastType" style="width:100%; padding:10px; border-radius:8px; background:rgba(3,4,94,0.8); border:1px solid #00b4d8; color:#e0f7ff; font-weight:600;">
+              <option value="Flood Warning 🌊">🌊 Coastal Flood Warning</option>
+              <option value="Cyclone Red Alert 🌀">🌀 Cyclone Red Alert</option>
+              <option value="Tsunami Warning 🌊">🌊 Tsunami High Risk Alert</option>
+              <option value="High Tide Alert ⚠️">⚠️ High Tide & Storm Surge</option>
+              <option value="Oil Spill Contamination 🛢️">🛢️ Oil Spill Hazard</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom:1rem;">
+            <label style="font-size:0.8rem; color:#90e0ef; font-weight:600; display:block; margin-bottom:4px;">Location / Area</label>
+            <input type="text" id="bcastLoc" value="Ratnagiri Coastal Area" style="width:100%; padding:10px; border-radius:8px; background:rgba(3,4,94,0.8); border:1px solid #00b4d8; color:#e0f7ff;" />
+          </div>
+
+          <div style="margin-bottom:1rem;">
+            <label style="font-size:0.8rem; color:#90e0ef; font-weight:600; display:block; margin-bottom:4px;">Emergency Message</label>
+            <textarea id="bcastMsg" rows="3" style="width:100%; padding:10px; border-radius:8px; background:rgba(3,4,94,0.8); border:1px solid #00b4d8; color:#e0f7ff;" placeholder="Type emergency description here...">Water level rising rapidly by 1.8m. All citizens proceed immediately to elevated bypass relief camp.</textarea>
+          </div>
+
+          <button onclick="triggerUniversalBroadcast()" style="width:100%; padding:12px; border-radius:10px; background:linear-gradient(135deg,#ef4444,#dc2626); border:none; color:white; font-weight:800; font-size:0.95rem; cursor:pointer; box-shadow:0 4px 20px rgba(239,68,68,0.4); display:flex; align-items:center; justify-content:center; gap:8px;">
+            <span>📢 BROADCAST TO EVERYONE (Online / Offline)</span>
+          </button>
+        </div>
+
+        <!-- Live Broadcasted Alerts Feed -->
+        <div style="background:rgba(255,255,255,0.04); padding:1.2rem; border-radius:12px; border:1px solid rgba(144,224,239,0.15); display:flex; flex-direction:column;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h4 style="font-size:1rem; font-weight:700; color:#e0f7ff;">📡 Live Mesh Broadcast Feed</h4>
+            <span style="font-size:0.75rem; color:#7fb3c8;">Auto-Synced across all nodes</span>
+          </div>
+
+          <div id="meshBroadcastFeed" style="flex:1; overflow-y:auto; max-height:280px; display:flex; flex-direction:column; gap:10px; padding-right:4px;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1174,6 +1235,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <!-- Leaflet.js -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- P2P Mesh & WebSocket Broadcast Script -->
+<script src="mesh_broadcast.js"></script>
 <!-- Main Script -->
 <script src="app.js"></script>
 
@@ -1317,6 +1380,64 @@ function toggleSMSPanel() {
 
 // Pre-render contacts
 renderSMSContacts();
+
+// --- Universal Broadcast Integration ---
+function triggerUniversalBroadcast() {
+  const type = document.getElementById('bcastType')?.value || 'Flood Warning 🌊';
+  const loc = document.getElementById('bcastLoc')?.value || 'Current Zone';
+  const msg = document.getElementById('bcastMsg')?.value || 'Emergency Flood Alert';
+
+  if (!msg.trim()) {
+    alert('Please enter an emergency message to broadcast.');
+    return;
+  }
+
+  if (window.emergencyMesh) {
+    const alert = window.emergencyMesh.broadcastAlert(type, msg, loc, 'CRITICAL');
+    if (window.showToast) window.showToast(`📢 Alert Broadcasted via ${alert.origin_mode}!`, 'sos');
+  }
+}
+
+function renderMeshFeedAlert(alert, source = 'Network') {
+  const feed = document.getElementById('meshBroadcastFeed');
+  if (!feed) return;
+
+  const item = document.createElement('div');
+  const isOfflineMode = alert.origin_mode === 'Offline Mesh' || (source && (source.includes('Offline') || source.includes('Local') || source.includes('P2P')));
+  const badgeColor = isOfflineMode ? '#f59e0b' : '#22c55e';
+  const badgeText = isOfflineMode ? '⚡ P2P Offline Mesh' : '📡 Online Broadcast';
+
+  item.style.cssText = `
+    background: rgba(255,255,255,0.06);
+    border-left: 4px solid ${badgeColor};
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.82rem;
+    color: #e0f7ff;
+    margin-bottom: 8px;
+  `;
+
+  item.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+      <strong style="color:#caf0f8; font-size:0.88rem;">${alert.type}</strong>
+      <span style="font-size:0.7rem; font-weight:700; color:${badgeColor}; background:rgba(0,0,0,0.3); padding:2px 8px; border-radius:12px;">${badgeText}</span>
+    </div>
+    <div style="color:#90e0ef; margin-bottom:4px;">${alert.message}</div>
+    <div style="font-size:0.72rem; color:#7fb3c8; display:flex; justify-content:space-between;">
+      <span>📍 ${alert.location || 'Coastal Region'}</span>
+      <span>⏱️ ${alert.timestamp || 'Just now'}</span>
+    </div>
+  `;
+
+  feed.prepend(item);
+  if (feed.children.length > 10) feed.lastChild.remove();
+}
+
+if (window.emergencyMesh) {
+  window.emergencyMesh.onAlert((alert, source) => {
+    renderMeshFeedAlert(alert, source);
+  });
+}
 </script>
 
 </body>
