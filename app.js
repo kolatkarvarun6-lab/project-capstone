@@ -401,9 +401,13 @@ function initMap() {
 
   if (typeof L !== 'undefined') {
     try {
-      const map = L.map('map', { center: [15.3, 74.0], zoom: 5, zoomControl: true });
+      if (mapContainer._leaflet_id) return; // Already initialized
+
+      const map = L.map('map', { center: [15.5, 76.5], zoom: 5, zoomControl: true });
+      
+      // Use CartoDB Dark Matter / Voyager or OpenStreetMap
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
+        attribution: '© OpenStreetMap contributors | AquaShield GIS',
         maxZoom: 18,
       }).addTo(map);
 
@@ -414,8 +418,8 @@ function initMap() {
             width:36px;height:36px;border-radius:50% 50% 50% 0;
             background:${color};transform:rotate(-45deg);
             display:flex;align-items:center;justify-content:center;
-            box-shadow:0 4px 15px rgba(0,0,0,0.4);
-            border:2px solid rgba(255,255,255,0.5);
+            box-shadow:0 4px 15px ${color};
+            border:2px solid #fff;
           "><span style="transform:rotate(45deg);font-size:16px;">${emoji}</span></div>`,
           iconSize: [36, 36],
           iconAnchor: [18, 36],
@@ -425,7 +429,7 @@ function initMap() {
       mapData.forEach(d => {
         const marker = L.marker([d.lat, d.lng], { icon: createMarker(d.color, d.emoji) }).addTo(map);
         marker.bindPopup(`
-          <div style="font-family:'Inter',sans-serif;min-width:180px;">
+          <div style="font-family:'Inter',sans-serif;min-width:180px;background:#03045e;color:#caf0f8;padding:8px;border-radius:8px;">
             <div style="font-weight:700;font-size:0.95rem;color:#caf0f8;margin-bottom:6px;">${d.emoji} ${d.label}</div>
             <div style="font-size:0.8rem;color:#90e0ef;margin-bottom:4px;">📍 ${d.detail}</div>
             <div style="font-size:0.8rem;font-weight:600;color:#e0f7ff;">${d.severity}</div>
@@ -434,52 +438,152 @@ function initMap() {
       });
       return;
     } catch(e) {
-      console.warn("Leaflet map initialization exception. Using fallback interactive SVG map.", e);
+      console.warn("Leaflet map initialization exception. Using fallback high-detail GIS SVG map.", e);
     }
   }
 
-  // Fallback Native Interactive SVG GIS Map (if Leaflet CDN is offline)
+  // Fallback High-Definition Interactive SVG GIS Map (if Leaflet CDN is offline or blocked)
   renderFallbackSVGMap(mapContainer);
 }
 
 function renderFallbackSVGMap(container) {
+  // Mercator Projection: Convert Lat/Lng to SVG X/Y percentages for India Peninsular bounding box
+  // Lat range: 7.0°N to 25.0°N, Lng range: 68.0°E to 92.0°E
+  const minLat = 7.0, maxLat = 25.0;
+  const minLng = 67.0, maxLng = 92.0;
+
+  function projectCoords(lat, lng) {
+    const x = ((lng - minLng) / (maxLng - minLng)) * 100;
+    const y = 100 - ((lat - minLat) / (maxLat - minLat)) * 100;
+    return { x: Math.max(5, Math.min(95, x)), y: Math.max(5, Math.min(95, y)) };
+  }
+
   container.innerHTML = `
-    <div style="position:relative;width:100%;height:100%;background:linear-gradient(135deg,#023e8a,#0077b6);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-      <svg viewBox="0 0 800 480" style="width:100%;height:100%;opacity:0.4;position:absolute;inset:0;">
-        <!-- India Coastline Outline Path -->
-        <path d="M 250,50 Q 300,100 280,180 T 220,300 T 350,420 T 520,300 T 550,150 T 450,50 Z" fill="rgba(3,4,94,0.6)" stroke="#90e0ef" stroke-width="2"/>
-        <path d="M 100,200 Q 200,250 350,420 Q 500,250 650,150" fill="none" stroke="rgba(72,202,228,0.3)" stroke-width="3" stroke-dasharray="8,8"/>
+    <div style="position:relative;width:100%;height:100%;background:linear-gradient(135deg,#022c5e,#004e89,#0077b6);border-radius:16px;overflow:hidden;box-shadow:inset 0 0 50px rgba(0,0,0,0.6);font-family:'Inter',sans-serif;">
+      
+      <!-- Vector Map SVG Layer for India Peninsular Coastline & Boundaries -->
+      <svg viewBox="0 0 1000 600" style="width:100%;height:100%;position:absolute;inset:0;" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <linearGradient id="landGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="rgba(3, 15, 45, 0.85)"/>
+            <stop offset="100%" stop-color="rgba(7, 26, 68, 0.9)"/>
+          </linearGradient>
+          <linearGradient id="oceanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#021b3a"/>
+            <stop offset="100%" stop-color="#004a7c"/>
+          </linearGradient>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="4" result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+          </filter>
+        </defs>
+
+        <!-- Lat/Lng Grid Lines -->
+        <g stroke="rgba(144, 224, 239, 0.08)" stroke-width="1" stroke-dasharray="4,4">
+          <line x1="0" y1="120" x2="1000" y2="120" /><text x="15" y="115" fill="#7fb3c8" font-size="10">22°N</text>
+          <line x1="0" y1="240" x2="1000" y2="240" /><text x="15" y="235" fill="#7fb3c8" font-size="10">18°N</text>
+          <line x1="0" y1="360" x2="1000" y2="360" /><text x="15" y="355" fill="#7fb3c8" font-size="10">14°N</text>
+          <line x1="0" y1="480" x2="1000" y2="480" /><text x="15" y="475" fill="#7fb3c8" font-size="10">10°N</text>
+
+          <line x1="200" y1="0" x2="200" y2="600" /><text x="205" y="585" fill="#7fb3c8" font-size="10">72°E</text>
+          <line x1="400" y1="0" x2="400" y2="600" /><text x="405" y="585" fill="#7fb3c8" font-size="10">77°E</text>
+          <line x1="600" y1="0" x2="600" y2="600" /><text x="605" y="585" fill="#7fb3c8" font-size="10">82°E</text>
+          <line x1="800" y1="0" x2="800" y2="600" /><text x="805" y="585" fill="#7fb3c8" font-size="10">87°E</text>
+        </g>
+
+        <!-- Detailed India Landmass & Coastline Geometry -->
+        <path d="
+          M 180,60 
+          L 280,70 L 320,110 L 290,160 L 220,180 L 160,190 L 150,230 L 210,250 L 260,240 
+          L 290,300 L 320,350 L 360,410 L 410,480 L 450,540 L 470,540 L 490,490 L 530,440 
+          L 560,380 L 610,320 L 680,270 L 760,220 L 830,160 L 880,120 L 920,80 L 750,60 Z" 
+          fill="url(#landGrad)" stroke="#48cae4" stroke-width="2.5" filter="url(#glow)"/>
+
+        <!-- State Boundary Accent Lines -->
+        <g stroke="rgba(72, 202, 228, 0.25)" stroke-width="1.5" stroke-dasharray="3,3" fill="none">
+          <!-- Gujarat / Maharashtra Boundary -->
+          <path d="M 210,250 C 250,230 300,240 330,220" />
+          <!-- Maharashtra / Goa / Karnataka Boundary -->
+          <path d="M 290,300 C 330,290 380,300 420,310" />
+          <!-- Karnataka / Kerala Boundary -->
+          <path d="M 360,410 C 400,400 450,420 480,430" />
+          <!-- Tamil Nadu / Andhra Boundary -->
+          <path d="M 530,440 C 580,410 630,390 660,370" />
+          <!-- Odisha / WB Boundary -->
+          <path d="M 680,270 C 720,240 780,210 820,190" />
+        </g>
+
+        <!-- Ocean Region Text Labels -->
+        <text x="100" y="380" fill="rgba(144,224,239,0.35)" font-size="16" font-weight="700" letter-spacing="3">ARABIAN SEA</text>
+        <text x="680" y="380" fill="rgba(144,224,239,0.35)" font-size="16" font-weight="700" letter-spacing="3">BAY OF BENGAL</text>
+        <text x="380" y="570" fill="rgba(144,224,239,0.35)" font-size="14" font-weight="700" letter-spacing="2">INDIAN OCEAN</text>
+        
+        <!-- Coastal State Labels -->
+        <text x="210" y="220" fill="#90e0ef" font-size="11" font-weight="600">MAHARASHTRA</text>
+        <text x="250" y="320" fill="#90e0ef" font-size="11" font-weight="600">GOA</text>
+        <text x="300" y="370" fill="#90e0ef" font-size="11" font-weight="600">KARNATAKA</text>
+        <text x="360" y="470" fill="#90e0ef" font-size="11" font-weight="600">KERALA</text>
+        <text x="490" y="470" fill="#90e0ef" font-size="11" font-weight="600">TAMIL NADU</text>
+        <text x="580" y="330" fill="#90e0ef" font-size="11" font-weight="600">ANDHRA PRADESH</text>
+        <text x="680" y="240" fill="#90e0ef" font-size="11" font-weight="600">ODISHA</text>
+        <text x="800" y="160" fill="#90e0ef" font-size="11" font-weight="600">WEST BENGAL</text>
+
+        <!-- Animated GIS Radar Sweep Line -->
+        <g transform="translate(450, 480)">
+          <line x1="0" y1="0" x2="-350" y2="-350" stroke="rgba(72,202,228,0.4)" stroke-width="2">
+            <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="10s" repeatCount="indefinite"/>
+          </line>
+          <circle cx="0" cy="0" r="250" fill="none" stroke="rgba(72,202,228,0.15)" stroke-width="1"/>
+          <circle cx="0" cy="0" r="150" fill="none" stroke="rgba(72,202,228,0.15)" stroke-width="1"/>
+        </g>
       </svg>
 
-      <div style="position:absolute;top:12px;left:16px;background:rgba(3,4,94,0.85);backdrop-filter:blur(8px);padding:6px 12px;border-radius:50px;border:1px solid rgba(144,224,239,0.3);font-size:0.75rem;color:#90e0ef;">
-        📍 Interactive GIS Coastal Radar (Offline Mode Active)
+      <!-- Status Header -->
+      <div style="position:absolute;top:14px;left:16px;z-index:10;background:rgba(3,4,94,0.85);backdrop-filter:blur(10px);padding:8px 16px;border-radius:50px;border:1px solid rgba(144,224,239,0.3);display:flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(0,0,0,0.4);">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#00b4d8;box-shadow:0 0 10px #00b4d8;animation:pulse 1.5s infinite;"></span>
+        <span style="font-size:0.8rem;font-weight:700;color:#caf0f8;">📍 AquaShield High-Definition GIS Coastal Radar</span>
       </div>
 
-      <!-- Interactive Pin Markers -->
-      <div id="fallbackMarkers" style="position:absolute;inset:0;pointer-events:auto;">
-        ${mapData.map((d, i) => {
-          // Normalize lat/lng to container %
-          const left = 20 + ((d.lng - 68) / (90 - 68)) * 60;
-          const top = 90 - ((d.lat - 8) / (28 - 8)) * 80;
+      <!-- Geographically Positioned Markers -->
+      <div id="fallbackMarkers" style="position:absolute;inset:0;pointer-events:auto;z-index:15;">
+        ${mapData.map((d) => {
+          const pt = projectCoords(d.lat, d.lng);
           return `
             <div onclick="showMarkerPopup('${d.label}', '${d.detail}', '${d.severity}', '${d.emoji}')" 
                  title="${d.label} - ${d.detail}"
-                 style="position:absolute;left:${left}%;top:${top}%;transform:translate(-50%,-50%);cursor:pointer;z-index:5;">
-              <div style="width:34px;height:34px;border-radius:50% 50% 50% 0;background:${d.color};transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 0 15px ${d.color};border:2px solid #fff;">
+                 style="position:absolute;left:${pt.x}%;top:${pt.y}%;transform:translate(-50%,-100%);cursor:pointer;transition:transform 0.2s ease;"
+                 onmouseover="this.style.transform='translate(-50%,-110%) scale(1.15)'"
+                 onmouseout="this.style.transform='translate(-50%,-100%) scale(1)'">
+              
+              <!-- Pulse Glow Ring -->
+              <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:24px;height:8px;border-radius:50%;background:${d.color};opacity:0.6;filter:blur(3px);"></div>
+
+              <!-- Marker Pin -->
+              <div style="width:36px;height:36px;border-radius:50% 50% 50% 0;background:${d.color};transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px ${d.color};border:2px solid #fff;">
                 <span style="transform:rotate(45deg);font-size:16px;">${d.emoji}</span>
               </div>
             </div>`;
         }).join('')}
       </div>
 
-      <div id="mapPopup" style="display:none;position:absolute;bottom:20px;background:rgba(3,4,94,0.95);border:1px solid #48cae4;color:#caf0f8;padding:10px 16px;border-radius:12px;backdrop-filter:blur(12px);z-index:20;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
-        <div id="popupTitle" style="font-weight:700;font-size:0.95rem;"></div>
-        <div id="popupDetail" style="font-size:0.8rem;color:#90e0ef;"></div>
-        <div id="popupSev" style="font-size:0.8rem;font-weight:600;margin-top:2px;"></div>
+      <!-- Popup Container -->
+      <div id="mapPopup" style="display:none;position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(3,4,94,0.95);border:1px solid #48cae4;color:#caf0f8;padding:12px 20px;border-radius:14px;backdrop-filter:blur(16px);z-index:30;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,0.6);min-width:240px;animation:fadeIn 0.3s ease;">
+        <div id="popupTitle" style="font-weight:800;font-size:1.05rem;color:#caf0f8;margin-bottom:4px;"></div>
+        <div id="popupDetail" style="font-size:0.85rem;color:#90e0ef;margin-bottom:4px;"></div>
+        <div id="popupSev" style="font-size:0.85rem;font-weight:700;"></div>
       </div>
     </div>
   `;
 }
+
+// Bind load and retry hooks for Leaflet map initialization
+document.addEventListener('DOMContentLoaded', () => {
+  initMap();
+  setTimeout(initMap, 800);
+});
+window.addEventListener('load', () => {
+  setTimeout(initMap, 500);
+});
 
 function showMarkerPopup(label, detail, severity, emoji) {
   const pop = document.getElementById('mapPopup');
